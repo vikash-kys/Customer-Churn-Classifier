@@ -1,0 +1,4 @@
+{
+  "status": "not_generated",
+  "message": "The upgraded analysis has not been run against the real Telco CSV in this project copy. Download the dataset into data/ and run python src/run_analysis.py --data data/WA_Fn-UseC_-Telco-Customer-Churn.csv. This page will display the generated metrics after reports/results.json is replaced by the analysis output."
+}
