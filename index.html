@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telco Churn | Applied Model Evaluation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+
+<style>
+  :root{
+    --bg: #f6f5fb;
+    --surface: #ffffff;
+    --surface-2: #fbfaff;
+    --ink: #1d1b34;
+    --ink-soft: #504d6e;
+    --muted: #8683a3;
+    --line: #e5e2f2;
+    --primary: #4a3aeb;
+    --primary-deep: #372ac2;
+    --primary-tint: #eeebfd;
+    --amber: #d98a2b;
+    --amber-tint: #fbf0dd;
+    --sidebar-bg: #14122b;
+    --sidebar-ink: #cfccea;
+    --sidebar-ink-dim: #8b87ad;
+    --sidebar-active: #6c5cf5;
+    --code-bg: #1c1a35;
+    --code-ink: #e3e1f7;
+    --radius: 10px;
+    --sidebar-w: 300px;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.68;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,h2,h3,h4{
+    font-family: 'Fraunces', Georgia, serif;
+    color: var(--ink);
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  a{ color: var(--primary-deep); }
+
+  code, .mono{ font-family: 'IBM Plex Mono', monospace; }
+
+  /* ---------- Layout shell ---------- */
+  .shell{ display:flex; min-height:100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    position: fixed;
+    top:0; left:0; bottom:0;
+    width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    color: var(--sidebar-ink);
+    overflow-y: auto;
+    padding: 34px 26px 40px;
+    border-right: 1px solid #232049;
+  }
+  .sidebar::-webkit-scrollbar{ width:8px; }
+  .sidebar::-webkit-scrollbar-thumb{ background:#2b2853; border-radius:8px; }
+
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom: 6px;
+  }
+  .brand-mark{
+    width:34px; height:34px;
+    border-radius:9px;
+    background: linear-gradient(135deg, var(--sidebar-active), var(--amber));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif; font-weight:700; color:#fff; font-size:16px;
+    flex: none;
+  }
+  .brand-name{
+    font-family:'Fraunces', serif;
+    font-size: 17px;
+    font-weight:600;
+    color:#fff;
+    line-height:1.25;
+  }
+  .brand-sub{
+    font-size:11.5px;
+    color: var(--sidebar-ink-dim);
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin: 16px 0 22px;
+    padding-bottom:18px;
+    border-bottom:1px solid #241f4a;
+  }
+
+  .toc-group-label{
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.11em;
+    color: var(--sidebar-ink-dim);
+    margin: 22px 0 8px;
+  }
+  .toc-group-label:first-of-type{ margin-top:0; }
+
+  nav.toc ul{ list-style:none; margin:0; padding:0; }
+  nav.toc li{ margin:1px 0; }
+  nav.toc a{
+    display:flex;
+    gap:10px;
+    align-items:baseline;
+    text-decoration:none;
+    color: var(--sidebar-ink);
+    font-size:13.6px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    transition: background .15s ease, color .15s ease;
+  }
+  nav.toc a .num{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--sidebar-ink-dim);
+    flex: none;
+    width: 20px;
+  }
+  nav.toc a:hover{ background:#201c46; color:#fff; }
+  nav.toc a.active{ background: rgba(108,92,245,.22); color:#fff; }
+  nav.toc a.active .num{ color: var(--amber); }
+
+  .sidebar-foot{
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid #241f4a;
+    font-size: 12px;
+    color: var(--sidebar-ink-dim);
+  }
+  .sidebar-foot a{ color: var(--sidebar-ink); }
+
+  /* ---------- Main content ---------- */
+  .main{
+    margin-left: var(--sidebar-w);
+    width: calc(100% - var(--sidebar-w));
+    padding: 0;
+  }
+
+  .hero{
+    padding: 64px 64px 46px;
+    max-width: 900px;
+  }
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing:.08em;
+    text-transform: uppercase;
+    color: var(--primary-deep);
+    background: var(--primary-tint);
+    padding: 6px 12px;
+    border-radius: 999px;
+    margin-bottom: 22px;
+  }
+  .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background: var(--amber); }
+
+  h1.page-title{
+    font-size: clamp(34px, 4.4vw, 50px);
+    margin: 0 0 16px;
+  }
+  .page-title em{ font-style: italic; color: var(--primary-deep); }
+
+  .subtitle{
+    font-size: 18px;
+    color: var(--ink-soft);
+    max-width: 640px;
+    margin: 0 0 28px;
+  }
+
+  .meta-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 10px 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+  .meta-item{ font-size: 13px; color: var(--muted); }
+  .meta-item strong{ display:block; color: var(--ink); font-size: 14px; font-weight:600; margin-bottom:2px; }
+
+  /* pipeline strip */
+  .pipeline{
+    display:flex;
+    align-items:center;
+    max-width: 900px;
+    margin: 8px 64px 10px;
+    padding: 20px 22px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow-x:auto;
+  }
+  .pipeline-step{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:8px;
+    flex: 1 1 0;
+    min-width: 92px;
+    position:relative;
+  }
+  .pipeline-step .pnum{
+    width:30px; height:30px; border-radius:50%;
+    background: var(--primary-tint); color: var(--primary-deep);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; font-weight:600;
+  }
+  .pipeline-step .plabel{ font-size:11.5px; color: var(--ink-soft); font-weight:500; }
+  .pipeline-arrow{ color: var(--line); font-size:18px; flex: 0 0 auto; padding: 0 2px 20px; }
+
+  /* content container */
+  .content{
+    max-width: 900px;
+    padding: 10px 64px 100px;
+  }
+
+  section.block{
+    padding-top: 54px;
+    margin-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  section.block:first-child{ border-top:none; }
+
+  .section-kicker{
+    display:flex; align-items:center; gap:12px;
+    margin-bottom: 14px;
+  }
+  .section-kicker .snum{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--amber);
+    font-weight:600;
+  }
+  .section-kicker .sline{ height:1px; flex:1; background: var(--line); }
+
+  h2.section-title{ font-size: 28px; margin: 0 0 18px; }
+  h3.sub-title{ font-size: 20px; margin: 32px 0 12px; color: var(--ink); }
+  h4.mini-title{ font-family:'Inter',sans-serif; font-weight:700; font-size:14.5px; text-transform:uppercase; letter-spacing:.04em; color: var(--primary-deep); margin: 24px 0 10px; }
+
+  p{ margin: 0 0 16px; color: var(--ink); }
+  .lead{ font-size: 17.5px; color: var(--ink-soft); }
+
+  ul.feature-list, ol.feature-list{ margin: 0 0 18px; padding-left: 22px; }
+  ul.feature-list li, ol.feature-list li{ margin-bottom: 8px; }
+
+  strong.hl{ color: var(--primary-deep); }
+  .accent{ color: var(--amber); }
+
+  /* callouts */
+  .callout{
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--primary);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin: 20px 0;
+    font-size: 15px;
+  }
+  .callout.amber{ border-left-color: var(--amber); }
+  .callout p:last-child{ margin-bottom:0; }
+  .callout-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--primary-deep);
+    margin-bottom: 8px;
+    display:block;
+  }
+  .callout.amber .callout-label{ color: #a86a1a; }
+
+  /* dataset feature grid */
+  .feature-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 18px 0 24px;
+  }
+  .feature-card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .feature-card h5{
+    margin:0 0 4px; font-size:13.5px; font-family:'IBM Plex Mono', monospace; color: var(--primary-deep); font-weight:600;
+  }
+  .feature-card p{ margin:0; font-size:13.5px; color: var(--ink-soft); }
+
+  /* code blocks */
+  pre{
+    background: var(--code-bg);
+    color: var(--code-ink);
+    padding: 18px 20px;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 16px 0 22px;
+  }
+  pre code{ font-family:'IBM Plex Mono', monospace; }
+  .code-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin: 22px 0 -8px;
+  }
+
+  /* equations */
+  .eq-block{
+    background: var(--primary-tint);
+    border: 1px solid #ded8fb;
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 14px 0 20px;
+    overflow-x: auto;
+    text-align:center;
+    color: var(--primary-deep);
+  }
+  .eq-caption{
+    font-size: 12.5px;
+    color: var(--muted);
+    text-align:center;
+    margin-top: -12px;
+    margin-bottom: 20px;
+  }
+
+  /* tables */
+  table.data-table{
+    width:100%;
+    border-collapse: collapse;
+    margin: 18px 0 8px;
+    font-size: 14.5px;
+  }
+  table.data-table th, table.data-table td{
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+  table.data-table thead th{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--muted);
+    border-bottom: 2px solid var(--ink);
+  }
+  table.data-table tbody tr:hover{ background: var(--surface-2); }
+  table.data-table td.num{ font-family:'IBM Plex Mono', monospace; }
+  table.data-table tr.best td{ background: var(--amber-tint); font-weight:600; }
+  .table-note{ font-size:12.5px; color:var(--muted); margin: -4px 0 24px; }
+
+  /* figures */
+  figure.fig{
+    margin: 22px 0 30px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  figure.fig img{ width:100%; height:auto; border-radius: 6px; display:block; }
+  figure.fig figcaption{
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* model cards */
+  .model-card{
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px 26px;
+    margin: 22px 0;
+    background: var(--surface);
+    position: relative;
+  }
+  .model-card .model-tag{
+    position:absolute; top:0; right:0;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color: var(--sidebar-ink-dim);
+    background: var(--sidebar-bg);
+    padding: 6px 12px;
+    border-radius: 0 9px 0 9px;
+  }
+  .model-card h4{ margin:0 0 4px; font-size: 19px; font-family:'Fraunces',serif; color: var(--ink); }
+  .model-card .model-role{ font-size: 13px; color: var(--amber); font-weight:600; margin-bottom:14px; }
+
+  /* metric chips */
+  .chip-row{ display:flex; flex-wrap:wrap; gap:10px; margin: 18px 0 26px; }
+  .chip{
+    display:flex; flex-direction:column; gap:2px;
+    padding: 12px 18px;
+    border-radius: 9px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    min-width: 108px;
+  }
+  .chip .chip-val{ font-family:'IBM Plex Mono', monospace; font-size: 19px; font-weight:600; color: var(--primary-deep); }
+  .chip .chip-lbl{ font-size: 11px; text-transform:uppercase; letter-spacing:.05em; color: var(--muted); }
+  .chip.win{ background: var(--amber-tint); border-color: #ecd6a8; }
+  .chip.win .chip-val{ color:#a86a1a; }
+
+  /* footer */
+  .page-footer{
+    max-width:900px;
+    padding: 40px 64px 70px;
+    color: var(--muted);
+    font-size: 13px;
+    border-top: 1px solid var(--line);
+    margin-top: 20px;
+  }
+  .page-footer a{ color: var(--ink-soft); }
+
+  /* scrollbar niceties */
+  ::selection{ background: var(--primary-tint); color: var(--primary-deep); }
+
+  /* responsive */
+  @media (max-width: 980px){
+    :root{ --sidebar-w: 240px; }
+    .hero, .content, .page-footer{ padding-left: 36px; padding-right: 30px; }
+    .pipeline{ margin-left:36px; margin-right:30px; }
+    .feature-grid{ grid-template-columns: 1fr; }
+  }
+  @media (max-width: 760px){
+    .sidebar{ display:none; }
+    .main{ margin-left:0; width:100%; }
+  }
+
+  .katex-display{ margin: .2em 0; }
+
+  .status-banner{border:1px solid var(--line);border-left:4px solid var(--amber);background:var(--amber-tint);padding:16px 18px;border-radius:8px;margin:18px 0 24px;font-size:14px}
+  .status-banner.ready{border-left-color:#25765b;background:#eaf6f0}
+  .status-banner strong{display:block;margin-bottom:4px}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}
+  .summary-card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:16px}
+  .summary-card .big{display:block;font-family:'IBM Plex Mono',monospace;font-size:23px;font-weight:600;color:var(--primary-deep);margin-bottom:3px}
+  .summary-card .small{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .method-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0 24px}
+  .method-card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:17px}
+  .method-card h3{margin:0 0 8px;font-size:18px}
+  .method-card p{font-size:14px;color:var(--ink-soft);margin:0}
+  .report-table-wrap{overflow-x:auto;margin:16px 0 24px}
+  table.report-table{width:100%;border-collapse:collapse;background:var(--surface);font-size:13.5px}
+  table.report-table th,table.report-table td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  table.report-table th{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:2px solid var(--ink)}
+  table.report-table tr:hover td{background:var(--surface-2)}
+  table.report-table td.num{text-align:right;font-family:'IBM Plex Mono',monospace}
+  .figure-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}
+  .figure-grid figure{margin:0;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:14px}
+  .figure-grid img{display:block;width:100%;height:auto;border-radius:5px}
+  .figure-grid figcaption{font-size:12px;color:var(--muted);margin-top:10px}
+  .small-note{font-size:13px;color:var(--muted)}
+  .inline-tag{display:inline-block;background:var(--primary-tint);color:var(--primary-deep);border-radius:999px;padding:3px 9px;font-size:11px;font-weight:600;letter-spacing:.03em;margin-right:5px}
+  .legacy{border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:14px 17px;margin:25px 0}
+  .legacy summary{cursor:pointer;font-weight:600;color:var(--ink-soft)}
+  .code-run{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;overflow-x:auto}
+  .highlight-line{border-left:3px solid var(--primary);padding:2px 0 2px 14px;margin:14px 0;color:var(--ink-soft)}
+  @media(max-width:760px){.summary-grid,.method-grid,.figure-grid{grid-template-columns:1fr}.hero{padding-top:38px}.content{padding-bottom:55px}}
+
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-name">Telco Churn<br>Applied Evaluation</div></div>
+    <div class="brand-sub">Data science &middot; reproducible ML</div>
+    <nav class="toc">
+      <div class="toc-group-label">Overview</div>
+      <ul><li><a href="#abstract"><span class="num">00</span> Executive Summary</a></li><li><a href="#dataset"><span class="num">01</span> Data Audit & EDA</a></li></ul>
+      <div class="toc-group-label">Method</div>
+      <ul><li><a href="#cleaning"><span class="num">02</span> Data Quality</a></li><li><a href="#engineering"><span class="num">03</span> Preprocessing</a></li><li><a href="#split"><span class="num">04</span> Experimental Design</a></li><li><a href="#modeling"><span class="num">05</span> Model Selection</a></li><li><a href="#metrics-math"><span class="num">06</span> Metrics & Calibration</a></li></ul>
+      <div class="toc-group-label">Evidence</div>
+      <ul><li><a href="#results"><span class="num">07</span> Results</a></li><li><a href="#decisions"><span class="num">08</span> Retention Decisions</a></li><li><a href="#limitations"><span class="num">09</span> Limitations</a></li><li><a href="#references"><span class="num">10</span> Reproduction</a></li></ul>
+    </nav>
+    <div class="sidebar-foot">Built with pandas, matplotlib &amp; scikit-learn.<br>Dataset: <a href="https://www.kaggle.com/datasets/blastchar/telco-customer-churn" target="_blank" rel="noopener">IBM / Kaggle Telco churn</a>.</div>
+  </aside>
+  <main class="main">
+    <div class="hero">
+      <div class="eyebrow"><span class="dot"></span> Binary classification &middot; customer retention</div>
+      <h1 class="page-title">Predicting Customer <em>Churn</em></h1>
+      <p class="subtitle">A reproducible investigation into churn-risk ranking, probability reliability, threshold selection, and the limits of translating predictions into retention decisions.</p>
+      <div class="meta-row">
+        <div class="meta-item"><strong>7,043</strong>expected source records</div>
+        <div class="meta-item"><strong>5-fold</strong>stratified CV</div>
+        <div class="meta-item"><strong>3 candidates</strong>baseline + linear + nonlinear</div>
+        <div class="meta-item"><strong>Untouched</strong>final test partition</div>
+      </div>
+    </div>
+    <div class="pipeline">
+      <div class="pipeline-step"><div class="pnum">01</div><div class="plabel">Audit&nbsp;Data</div></div><div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="pnum">02</div><div class="plabel">Split&nbsp;Rows</div></div><div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="pnum">03</div><div class="plabel">Fit&nbsp;Pipeline</div></div><div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="pnum">04</div><div class="plabel">Cross-Validate</div></div><div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="pnum">05</div><div class="plabel">Calibrate &amp; Set Threshold</div></div><div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="pnum">06</div><div class="plabel">Final Test</div></div>
+    </div>
+    <div class="content">
+      <section class="block" id="abstract">
+        <div class="section-kicker"><span class="snum">00</span><span class="sline"></span></div>
+        <h2 class="section-title">Executive summary</h2>
+        <p class="lead">The objective is not to find the most complicated classifier. It is to establish whether a model provides useful ranking, whether its probabilities are informative, and which decisions are justified by the evidence.</p>
+        <p>The project compares a prior-only <code>DummyClassifier</code>, interpretable <code>LogisticRegression</code>, and a nonlinear <code>RandomForestClassifier</code>. Model comparison and calibration selection occur through stratified cross-validation on the training partition. The operating threshold is selected from out-of-fold training predictions; only then is the chosen workflow assessed on a held-out test set.</p>
+        <div id="report-status" class="status-banner"><strong>Final analysis has not been generated in this copy yet.</strong><span>Download the dataset and run <code>python src/run_analysis.py --data data/WA_Fn-UseC_-Telco-Customer-Churn.csv</code>. The notebook and this page read the same generated report. No updated metrics are being fabricated from the earlier run.</span></div>
+        <div id="dataset-summary" class="summary-grid">
+          <div class="summary-card"><span class="big">—</span><span class="small">Rows audited</span></div>
+          <div class="summary-card"><span class="big">—</span><span class="small">Observed churn rate</span></div>
+          <div class="summary-card"><span class="big">—</span><span class="small">Held-out test rows</span></div>
+        </div>
+      </section>
+
+      <section class="block" id="dataset">
+        <div class="section-kicker"><span class="snum">01</span><span class="sline"></span></div>
+        <h2 class="section-title">Data audit and exploratory analysis</h2>
+        <p>The source dataset describes a fictional provider's customers, with account tenure, billing, service subscriptions, contract type and churn outcome. The row-level target is <code>Churn</code>: <code>Yes</code> is encoded as 1 and <code>No</code> as 0. A customer identifier is not a predictor.</p>
+        <p>Exploration is used to find data-quality issues and describe associations that motivate questions. Differences in observed churn rates are not causal effects: contract, tenure, service use and customer characteristics can be related to one another.</p>
+        <h3 class="sub-title">Audit results</h3>
+        <div id="audit-table" class="report-table-wrap"><p class="small-note">Audit values will appear after the notebook or script successfully executes.</p></div>
+        <h3 class="sub-title">Observed churn by contract and internet service</h3>
+        <div id="contract-eda-table" class="report-table-wrap"><p class="small-note">This descriptive table is generated from the loaded dataset.</p></div>
+        <div id="internet-eda-table" class="report-table-wrap"><p class="small-note">This descriptive table is generated from the loaded dataset.</p></div>
+        <div class="figure-grid">
+          <figure class="report-figure" data-fig="target_distribution" style="display:none"><img data-src="reports/target_distribution.png" alt="Churn target distribution"><figcaption>Class prevalence in the cleaned snapshot; accuracy must be interpreted against this baseline.</figcaption></figure>
+          <figure class="report-figure" data-fig="numeric_feature_distributions" style="display:none"><img data-src="reports/numeric_feature_distributions.png" alt="Distributions of tenure and charges"><figcaption>Distributions of tenure, monthly charges and total charges. Long-tailed charges can require careful inspection.</figcaption></figure>
+          <figure class="report-figure" data-fig="churn_by_contract" style="display:none"><img data-src="reports/churn_by_contract.png" alt="Observed churn rate by contract type"><figcaption>Descriptive churn rates by contract; association is not causation.</figcaption></figure>
+          <figure class="report-figure" data-fig="churn_by_internet_service" style="display:none"><img data-src="reports/churn_by_internet_service.png" alt="Observed churn rate by internet service"><figcaption>Descriptive churn rates by service; do not interpret these as causal effects.</figcaption></figure>
+          <figure class="report-figure" data-fig="churn_by_tenure_band" style="display:none"><img data-src="reports/churn_by_tenure_band.png" alt="Observed churn rate by tenure band"><figcaption>Observed churn varies with tenure; temporal validation is still needed to assess future performance.</figcaption></figure>
+        </div>
+      </section>
+
+      <section class="block" id="cleaning">
+        <div class="section-kicker"><span class="snum">02</span><span class="sline"></span></div>
+        <h2 class="section-title">Data quality decisions</h2>
+        <div class="method-grid">
+          <div class="method-card"><h3>Identifier removal</h3><p><code>customerID</code> is removed before modeling. It identifies a row, not a generalizable customer behavior pattern. Repeated predictor profiles are retained because different customers can share the same observed values.</p></div>
+          <div class="method-card"><h3><code>TotalCharges</code> parsing</h3><p>The source stores charges as text. Blank values are inspected alongside tenure. A blank for a zero-tenure customer is set to zero; any other unresolved missing numeric values are imputed within the training pipeline.</p></div>
+          <div class="method-card"><h3>Target validation</h3><p>The expected labels are checked and encoded as 1 for churn and 0 for no churn. Unexpected labels raise an error instead of silently becoming missing targets.</p></div>
+          <div class="method-card"><h3>No global-statistic leakage</h3><p>No dataset-wide median or scaling statistic is fitted before the split. Imputation, scaling and encoding are learned separately inside each training fold and refitted for the final model.</p></div>
+        </div>
+        <div class="callout amber"><span class="callout-label">Data-cleaning judgement</span>A generic median replacement for every blank <code>TotalCharges</code> value is not automatically correct. The implemented rule treats zero charges as a domain-based value only when tenure is zero; other missing values remain eligible for train-fitted imputation.</div>
+      </section>
+
+      <section class="block" id="engineering">
+        <div class="section-kicker"><span class="snum">03</span><span class="sline"></span></div>
+        <h2 class="section-title">Preprocessing as part of the model</h2>
+        <p>The transformation steps are packaged in a scikit-learn <code>Pipeline</code> and <code>ColumnTransformer</code>. This is more than code organization: it enforces the correct fit/transform boundary during cross-validation.</p>
+        <div class="method-grid">
+          <div class="method-card"><h3>Numeric features</h3><p>Median imputation for unresolved missing values, followed by standardization. The imputer and scaler learn parameters only from the current training fold.</p></div>
+          <div class="method-card"><h3>Categorical features</h3><p>Most-frequent imputation followed by one-hot encoding. Unknown categories are ignored at transform time instead of causing an inference-time error.</p></div>
+        </div>
+        <div class="code-run">Raw training fold<br>&nbsp;&nbsp;├── numeric pipeline: impute → standardize<br>&nbsp;&nbsp;└── categorical pipeline: impute → one-hot encode<br>Transformed matrix → classifier<br><br>Validation fold: transform with fitted training-fold steps only</div>
+        <p class="small-note">A model's final performance is still evaluated on rows held aside before model selection. Pipeline correctness prevents leakage in preprocessing but does not by itself prevent every kind of leakage; feature availability and target-derived columns must also be audited.</p>
+      </section>
+
+      <section class="block" id="split">
+        <div class="section-kicker"><span class="snum">04</span><span class="sline"></span></div>
+        <h2 class="section-title">Experimental design</h2>
+        <ul class="feature-list">
+          <li><strong>Stratified 80/20 split:</strong> preserve approximate class prevalence while reserving a final test partition.</li>
+          <li><strong>Five-fold stratified CV on the training partition:</strong> compare models using the same folds; report mean and fold-to-fold standard deviation.</li>
+          <li><strong>Model selection:</strong> choose among Logistic Regression and Random Forest using mean average precision. The dummy baseline is a reference, not eligible to win.</li>
+          <li><strong>Calibration decision:</strong> compare the selected model's raw probabilities with sigmoid calibration using cross-validated Brier score on training data only.</li>
+          <li><strong>Threshold selection:</strong> use out-of-fold training probabilities and an explicit minimum-recall target, with higher precision preferred among qualifying thresholds.</li>
+          <li><strong>Final test:</strong> report results after model, calibration method and threshold have been selected. Do not tune based on the final test labels.</li>
+        </ul>
+        <div class="callout"><span class="callout-label">What the standard deviation means</span>Fold-to-fold variation is useful for seeing whether model quality is stable across training subsets. It is not a 95% confidence interval and does not capture dataset shift, changes over time, or every source of uncertainty.</div>
+      </section>
+
+      <section class="block" id="modeling">
+        <div class="section-kicker"><span class="snum">05</span><span class="sline"></span></div>
+        <h2 class="section-title">The model candidates</h2>
+        <div class="model-card"><div class="model-tag">BASELINE</div><h4>DummyClassifier</h4><div class="model-role">Prior-only benchmark</div><p>Predicts from the class distribution and provides a floor for comparison. A candidate that cannot beat this baseline in useful ranking or decision metrics has not demonstrated meaningful predictive value.</p></div>
+        <div class="model-card"><div class="model-tag">INTERPRETABLE</div><h4>Logistic Regression</h4><div class="model-role">Regularized linear decision function</div><p>Models log-odds as a linear combination of transformed predictors. Its coefficients can support interpretation of conditional associations, subject to encoding, correlated features and model assumptions. They do not establish causal effects.</p></div>
+        <div class="model-card"><div class="model-tag">NONLINEAR</div><h4>Random Forest</h4><div class="model-role">Bagged decision trees</div><p>Can capture nonlinear relationships and interactions without manually specifying them. Its probability estimates still require evaluation, and feature importance can be biased or spread across correlated variables.</p></div>
+        <p>Gaussian Naive Bayes and an RBF SVM appeared in the original comparison. They are not part of the primary candidate set: Gaussian Naive Bayes' feature-distribution and conditional-independence assumptions are awkward for one-hot categories, while an RBF SVM adds tuning and compute costs without a specific hypothesis that justifies keeping it in this streamlined experiment. They can be added later as training-only candidates if there is a clear research question.</p>
+      </section>
+
+      <section class="block" id="metrics-math">
+        <div class="section-kicker"><span class="snum">06</span><span class="sline"></span></div>
+        <h2 class="section-title">Metrics, probability quality and uncertainty</h2>
+        <div class="method-grid">
+          <div class="method-card"><h3>ROC-AUC</h3><p>Measures ranking discrimination across thresholds. It does not say whether predicted probabilities are calibrated and can look acceptable when the positive-class retrieval performance is weak.</p></div>
+          <div class="method-card"><h3>Average precision</h3><p>Summarizes the precision-recall curve as a stepwise weighted average. Compare it with the positive-class prevalence and do not call it interchangeable with every trapezoidal PR-AUC implementation.</p></div>
+          <div class="method-card"><h3>Precision and recall</h3><p>Precision asks what share of flagged customers churned; recall asks what share of churners were flagged. Increasing recall usually requires contacting more customers, including more false positives.</p></div>
+          <div class="method-card"><h3>Brier score and calibration</h3><p>The mean squared error of predicted probabilities against binary outcomes. Lower is better; the calibration curve compares mean predicted probability with observed event frequency in probability bins.</p></div>
+          <div class="method-card"><h3>Bootstrap intervals</h3><p>Percentile intervals resample held-out test rows and quantify sampling variation conditional on this particular split. They do not account for distribution shift or all sources of uncertainty.</p></div>
+          <div class="method-card"><h3>Confusion matrix</h3><p>True positives are detected churners; false negatives are missed churners; false positives are flagged customers who did not churn; true negatives are correctly unflagged customers.</p></div>
+        </div>
+      </section>
+
+      <section class="block" id="results">
+        <div class="section-kicker"><span class="snum">07</span><span class="sline"></span></div>
+        <h2 class="section-title">Model comparison and final test</h2>
+        <p>The tables and figures below populate from <code>reports/results.json</code> and files generated by <code>src/run_analysis.py</code>. Run the updated analysis before treating any outputs as final.</p>
+        <h3 class="sub-title">Training-only cross-validation</h3>
+        <div id="cv-table" class="report-table-wrap"><p class="small-note">Awaiting generated cross-validation results.</p></div>
+        <details class="legacy"><summary>View selected hyperparameters for each candidate</summary><div id="parameters-table" class="report-table-wrap"><p class="small-note">Hyperparameters will appear after the analysis runs.</p></div></details>
+        <div class="figure-grid">
+          <figure class="report-figure" data-fig="cv_average_precision" style="display:none"><img data-src="reports/cv_average_precision.png" alt="Cross-validation average precision comparison"><figcaption>Mean average precision and fold-to-fold standard deviation. The dummy classifier is a benchmark.</figcaption></figure>
+          <figure class="report-figure" data-fig="calibration_curve" style="display:none"><img data-src="reports/calibration_curve.png" alt="Calibration curves on held-out test data"><figcaption>Observed frequency versus mean predicted probability on the held-out test partition.</figcaption></figure>
+        </div>
+        <h3 class="sub-title">Selected model and operating point</h3>
+        <div id="selected-summary" class="summary-grid"><div class="summary-card"><span class="big">—</span><span class="small">Selected model</span></div><div class="summary-card"><span class="big">—</span><span class="small">Selected threshold</span></div><div class="summary-card"><span class="big">—</span><span class="small">Test average precision</span></div></div>
+        <div id="test-metrics-table" class="report-table-wrap"><p class="small-note">Final test metrics will appear after a successful run.</p></div>
+        <div id="interval-table" class="report-table-wrap"></div>
+        <div class="figure-grid">
+          <figure class="report-figure" data-fig="threshold_tradeoff" style="display:none"><img data-src="reports/threshold_tradeoff.png" alt="Training-only precision recall threshold selection"><figcaption>Threshold is selected from training out-of-fold predictions, not by optimizing test results.</figcaption></figure>
+          <figure class="report-figure" data-fig="test_confusion_matrix" style="display:none"><img data-src="reports/test_confusion_matrix.png" alt="Selected model confusion matrix on test data"><figcaption>Confusion matrix for the chosen operating threshold on the held-out test data.</figcaption></figure>
+        </div>
+        <details class="legacy"><summary>Historical results from the original notebook (not the upgraded evaluation)</summary><p class="small-note">These values are retained solely as a historical reference. They came from one 80/20 split and default 0.5 decisions for three models, before the redesigned cross-validation and calibration/threshold workflow. They should not be compared as if the experimental designs were identical.</p><div class="report-table-wrap"><table class="report-table"><thead><tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th></tr></thead><tbody><tr><td>Logistic Regression</td><td>0.8055</td><td>0.6572</td><td>0.5588</td><td>0.6040</td><td>0.8420</td></tr><tr><td>Gaussian Naive Bayes</td><td>0.6558</td><td>0.4269</td><td>0.8663</td><td>0.5719</td><td>0.8093</td></tr><tr><td>RBF SVM</td><td>0.7928</td><td>0.6496</td><td>0.4759</td><td>0.5494</td><td>0.7927</td></tr></tbody></table></div></details>
+      </section>
+
+      <section class="block" id="decisions">
+        <div class="section-kicker"><span class="snum">08</span><span class="sline"></span></div>
+        <h2 class="section-title">From risk ranking to a retention decision</h2>
+        <p>A risk model can prioritize which customers to investigate, but it cannot infer who will respond to a retention offer. The top-risk analysis measures how many observed churners appear within a constrained contact list. It is not an estimate of customers saved or return on investment.</p>
+        <div id="risk-table" class="report-table-wrap"><p class="small-note">Risk-capture results will populate after the analysis runs.</p></div>
+        <h3 class="sub-title">Subgroup performance</h3>
+        <p>Recall, precision, observed churn rate and flagged fraction are reported by contract, internet-service, payment-method and tenure segments. Always inspect group size and positive support. A low sample count creates noisy estimates; a segment difference is not, by itself, proof of discrimination or a causal mechanism.</p>
+        <div id="subgroup-table" class="report-table-wrap"><p class="small-note">Subgroup analysis will populate after the analysis runs.</p></div>
+        <h3 class="sub-title">Post-hoc model interpretation</h3>
+        <p>Permutation importance measures the drop in average precision after a feature is shuffled. It indicates reliance by this fitted model on this evaluation sample. Correlated predictors can share or mask importance; this is not a causal effect.</p>
+        <div id="feature-table" class="report-table-wrap"><p class="small-note">Permutation importance will populate after the analysis runs.</p></div>
+        <h3 class="sub-title">Logistic Regression coefficients and odds ratios</h3>
+        <p>These coefficients come from the tuned Logistic Regression reference candidate fitted on the training partition, whether or not it is selected as the final model. Numeric columns are standardized, so their odds ratios correspond to a one-standard-deviation increase; one-hot coefficients compare a category with its dropped reference level. These are conditional associations, not causal effects.</p>
+        <div id="coefficients-table" class="report-table-wrap"><p class="small-note">Coefficients will populate after the analysis runs.</p></div>
+        <div class="figure-grid">
+          <figure class="report-figure" data-fig="permutation_importance" style="display:none"><img data-src="reports/permutation_importance.png" alt="Permutation importance of model input features"><figcaption>Positive values indicate reduced average precision after permutation; small or negative estimates should be interpreted cautiously.</figcaption></figure>
+          <figure class="report-figure" data-fig="contract_subgroup_recall" style="display:none"><img data-src="reports/contract_subgroup_recall.png" alt="Recall by contract type"><figcaption>Subgroup recall at the selected threshold, shown only for segments meeting the prespecified minimum sample size.</figcaption></figure>
+        </div>
+      </section>
+
+      <section class="block" id="limitations">
+        <div class="section-kicker"><span class="snum">09</span><span class="sline"></span></div>
+        <h2 class="section-title">Limitations and next experiments</h2>
+        <ul class="feature-list">
+          <li><strong>Snapshot, not temporal validation.</strong> A later time period would better test deployment generalization and drift.</li>
+          <li><strong>Prediction is not intervention effect.</strong> Randomized retention offers or a credible causal design are needed to estimate who can be persuaded to stay.</li>
+          <li><strong>Threshold is illustrative.</strong> The 75% recall target must be replaced by a business-approved trade-off informed by contact capacity, offer cost, customer value and expected treatment effect.</li>
+          <li><strong>Uncertainty is conditional.</strong> The bootstrap intervals quantify sampling variation on this held-out split but do not fix selection bias in the dataset or guarantee future performance.</li>
+          <li><strong>Correlated features complicate interpretation.</strong> Permutation importance is a model diagnostic, not causal attribution.</li>
+        </ul>
+        <p>A credible next study would validate on later-period customers, monitor calibration and ranking over time, and experimentally measure the incremental effect of retention interventions.</p>
+      </section>
+
+      <section class="block" id="references">
+        <div class="section-kicker"><span class="snum">10</span><span class="sline"></span></div>
+        <h2 class="section-title">Reproduction</h2>
+        <p>Download the CSV from the <a href="https://www.kaggle.com/datasets/blastchar/telco-customer-churn" target="_blank" rel="noopener">Telco Customer Churn Kaggle dataset</a> and place it in <code>data/</code>. Then use Python 3.10+ and install the packages in <code>requirements.txt</code>.</p>
+        <div class="code-run">python -m pip install -r requirements.txt<br>python src/run_analysis.py --data data/WA_Fn-UseC_-Telco-Customer-Churn.csv<br><br># or run src/Churn_prediction.ipynb from Jupyter</div>
+        <p>The script writes <code>reports/results.json</code>, CV/subgroup/importance CSVs and chart PNGs. This page reads those generated outputs; refresh the site after rerunning the analysis. If the report status above says it has not been generated, the updated metrics are not yet available in this copy.</p>
+        <ul class="feature-list"><li><strong>Python source:</strong> <code>src/run_analysis.py</code></li><li><strong>Notebook:</strong> <code>src/Churn_prediction.ipynb</code></li><li><strong>Generated results:</strong> <code>reports/results.json</code></li><li><strong>Dataset instructions:</strong> <code>data/README.md</code></li></ul>
+      </section>
+    </div>
+    <div class="page-footer">Portfolio project &middot; applied classification, cross-validation, probability calibration, threshold selection, and decision-aware evaluation. Results are generated from the accompanying source, not manually hardcoded in the upgraded report.</div>
+  </main>
+</div>
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const fmt = (v, digits=3) => (v === null || v === undefined || !Number.isFinite(Number(v))) ? '—' : Number(v).toFixed(digits);
+  const pct = (v, digits=1) => (v === null || v === undefined || !Number.isFinite(Number(v))) ? '—' : (100*Number(v)).toFixed(digits)+'%';
+  function makeTable(containerId, headers, rows, opts={}){
+    const host = $(containerId); if(!host) return;
+    host.replaceChildren();
+    if(!rows || !rows.length){ host.textContent = 'No rows available in the generated report.'; return; }
+    const wrap=document.createElement('div'); wrap.className='report-table-wrap';
+    const table=document.createElement('table'); table.className='report-table';
+    const thead=document.createElement('thead'), tr=document.createElement('tr');
+    headers.forEach(h=>{const th=document.createElement('th');th.textContent=h.label;tr.appendChild(th)});
+    thead.appendChild(tr);table.appendChild(thead);
+    const tbody=document.createElement('tbody');
+    rows.forEach(row=>{const r=document.createElement('tr');headers.forEach(h=>{const td=document.createElement('td');if(h.numeric)td.className='num';const v=h.get? h.get(row):row[h.key];td.textContent=(v===null||v===undefined)?'—':String(v);r.appendChild(td)});tbody.appendChild(r)});
+    table.appendChild(tbody);wrap.appendChild(table);host.appendChild(wrap);
+  }
+  function metricRows(m){return [
+    {Metric:'Accuracy',Value:fmt(m.accuracy)},{Metric:'Balanced accuracy',Value:fmt(m.balanced_accuracy)},
+    {Metric:'Precision',Value:fmt(m.precision)},{Metric:'Recall',Value:fmt(m.recall)},
+    {Metric:'F1',Value:fmt(m.f1)},{Metric:'ROC-AUC',Value:fmt(m.roc_auc)},
+    {Metric:'Average precision',Value:fmt(m.average_precision)},{Metric:'Brier score (lower is better)',Value:fmt(m.brier_score)},
+    {Metric:'Threshold',Value:fmt(m.threshold,4)},{Metric:'Customers flagged',Value:`${m.flagged_count} / ${m.support}`},
+    {Metric:'TN / FP / FN / TP',Value:`${m.tn} / ${m.fp} / ${m.fn} / ${m.tp}`}
+  ]}
+  function render(data){
+    if(!data || data.status!=='ready'){
+      const box=$('report-status');
+      if(data && data.status==='not_generated' && data.message) box.querySelector('span').textContent=data.message;
+      return;
+    }
+    const status=$('report-status');status.classList.add('ready');status.innerHTML='<strong>Generated report loaded.</strong><span>Metrics below are loaded from the report produced by the local analysis script. Generated at '+new Date(data.generated_at_utc).toLocaleString()+' (browser local time).</span>';
+    const ds=data.dataset||{};
+    $('dataset-summary').innerHTML=`<div class="summary-card"><span class="big">${Number(ds.rows||0).toLocaleString()}</span><span class="small">Rows after audit</span></div><div class="summary-card"><span class="big">${pct(ds.prevalence_overall)}</span><span class="small">Observed churn rate</span></div><div class="summary-card"><span class="big">${Number(ds.test_rows||0).toLocaleString()}</span><span class="small">Held-out test rows</span></div>`;
+    const audit=data.data_audit||{};
+    const auditRows=Object.entries(audit).map(([key,value])=>({key,value: (value && typeof value==='object') ? JSON.stringify(value) : (typeof value==='number' && key.toLowerCase().includes('rate') ? pct(value):String(value))}));
+    makeTable('audit-table',[{key:'key',label:'Audit item'},{key:'value',label:'Value'}],auditRows);
+    const contract=Object.entries((data.eda||{}).churn_rate_by_contract||{}).map(([segment,v])=>({segment,customers:v.customers,rate:pct(v.churn_rate)}));
+    makeTable('contract-eda-table',[{key:'segment',label:'Contract'},{key:'customers',label:'Customers',numeric:true},{key:'rate',label:'Observed churn rate'}],contract);
+    const internet=Object.entries((data.eda||{}).churn_rate_by_internet_service||{}).map(([segment,v])=>({segment,customers:v.customers,rate:pct(v.churn_rate)}));
+    makeTable('internet-eda-table',[{key:'segment',label:'Internet service'},{key:'customers',label:'Customers',numeric:true},{key:'rate',label:'Observed churn rate'}],internet);
+    const cvs=(data.cross_validation||{}).models||[];
+    makeTable('cv-table',[
+      {key:'Model',label:'Candidate'},
+      {label:'Average precision mean ± SD',get:r=>`${fmt(r['Average Precision mean'])} ± ${fmt(r['Average Precision std'])}`},
+      {label:'ROC-AUC mean ± SD',get:r=>`${fmt(r['Roc Auc mean'])} ± ${fmt(r['Roc Auc std'])}`},
+      {label:'Recall mean ± SD',get:r=>`${fmt(r['Recall mean'])} ± ${fmt(r['Recall std'])}`},
+      {label:'Brier mean ± SD',get:r=>`${fmt(r['Brier score mean'])} ± ${fmt(r['Brier score std'])}`}
+    ],cvs);
+    makeTable('parameters-table',[{key:'Model',label:'Candidate'},{key:'Selected parameters',label:'Parameters selected within training CV'}],cvs);
+    const t=data.test_metrics_selected_threshold||{};
+    $('selected-summary').innerHTML=`<div class="summary-card"><span class="big">${data.selected_model||'—'}</span><span class="small">Selected by CV average precision</span></div><div class="summary-card"><span class="big">${fmt((data.threshold_selection||{}).threshold,4)}</span><span class="small">Training OOF threshold</span></div><div class="summary-card"><span class="big">${fmt(t.average_precision)}</span><span class="small">Test average precision</span></div>`;
+    makeTable('test-metrics-table',[{key:'Metric',label:'Selected-threshold test metric'},{key:'Value',label:'Value',numeric:true}],metricRows(t));
+    const ci=data.bootstrap_95_percent_intervals||{};
+    const ciRows=Object.entries(ci).map(([metric,v])=>({metric,interval:`${fmt(v.lower_95)} – ${fmt(v.upper_95)}`,n:v.valid_replicates}));
+    makeTable('interval-table',[{key:'metric',label:'Metric'},{key:'interval',label:'95% bootstrap interval'},{key:'n',label:'Valid replicates',numeric:true}],ciRows);
+    const risks=(data.risk_capture||[]).map(r=>({budget:pct(r.risk_fraction,0),n:r.customers_selected,captured:r.churners_captured,precision:pct(r.precision_in_selected),recall:pct(r.fraction_of_all_churners_captured),random:pct(r.random_selection_expected_recall)}));
+    makeTable('risk-table',[{key:'budget',label:'Top-risk share'},{key:'n',label:'Customers selected',numeric:true},{key:'captured',label:'Observed churners captured',numeric:true},{key:'precision',label:'Churn rate in selected group'},{key:'recall',label:'Fraction of all churners captured'},{key:'random',label:'Expected recall under random selection'}],risks);
+    const sub=(data.subgroup_metrics||[]).slice().sort((a,b)=>String(a.dimension).localeCompare(String(b.dimension)) || (b.n-a.n)).slice(0,50).map(r=>({dimension:r.dimension,segment:r.segment,n:r.n,positive:r.actual_churners,rate:pct(r.observed_churn_rate),recall:r.recall===null?'—':pct(r.recall),precision:pct(r.precision),flagged:pct(r.flagged_fraction),support:r.minimum_n_met?'n ≥ 50':'small n'}));
+    makeTable('subgroup-table',[{key:'dimension',label:'Dimension'},{key:'segment',label:'Segment'},{key:'n',label:'n',numeric:true},{key:'positive',label:'Actual churners',numeric:true},{key:'rate',label:'Observed churn'},{key:'recall',label:'Recall'},{key:'precision',label:'Precision'},{key:'flagged',label:'Flagged fraction'},{key:'support',label:'Sample note'}],sub);
+    const features=(data.feature_importance||[]).slice(0,15).map(r=>({feature:r.feature,mean:fmt(r.importance_mean,4),sd:fmt(r.importance_std,4)}));
+    makeTable('feature-table',[{key:'feature',label:'Input feature'},{key:'mean',label:'Mean AP decrease',numeric:true},{key:'sd',label:'Permutation SD',numeric:true}],features);
+    const coefs=(data.logistic_coefficients||[]).slice(0,20).map(r=>({feature:r.feature,coefficient:fmt(r.coefficient_log_odds,4),odds:fmt(r.odds_ratio,3),direction:r.direction}));
+    makeTable('coefficients-table',[{key:'feature',label:'Transformed feature / category'},{key:'coefficient',label:'Coefficient (log odds)',numeric:true},{key:'odds',label:'Odds ratio',numeric:true},{key:'direction',label:'Direction'}],coefs);
+    const calibration=data.calibration||{};
+    const calParagraph=document.createElement('p');calParagraph.className='highlight-line';calParagraph.textContent=`Calibration choice from training-only CV: ${calibration.selected_probability_method||'—'}. Mean Brier, raw: ${fmt(calibration.raw_brier_cv_mean)}; sigmoid-calibrated: ${fmt(calibration.sigmoid_calibrated_brier_cv_mean)}. Test-set calibration curves are descriptive, not used to choose the method.`;
+    $('interval-table').appendChild(calParagraph);
+    document.querySelectorAll('.report-figure').forEach(fig=>{const img=fig.querySelector('img');const source=img.dataset.src;if(source){img.onerror=()=>{fig.style.display='none'};img.src=source;fig.style.display='block';}});
+  }
+  fetch('reports/results.json').then(r=>{if(!r.ok)throw new Error('Report JSON not found');return r.json()}).then(render).catch(()=>{const b=$('report-status');b.querySelector('span').textContent='No generated report was found by this page. Open the notebook or run the documented Python command after placing the CSV in data/. For a file:// preview, serve the folder locally so the browser can read report JSON.'});
+  const links=document.querySelectorAll('nav.toc a');
+  const sections=Array.from(links).map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  function onScroll(){let current=sections[0];const y=window.scrollY+140;sections.forEach(sec=>{if(sec.offsetTop<=y)current=sec});links.forEach(a=>a.classList.remove('active'));const idx=sections.indexOf(current);if(links[idx])links[idx].classList.add('active')}
+  window.addEventListener('scroll',onScroll);onScroll();
+})();
+</script>
+</body>
+</html>
